@@ -1,12 +1,3 @@
-# Scrollable 3D Animation with Three.js
+## The Great Gatsby
 
-- Watch the [full tutorial](https://youtu.be/Q7AOvWpIVHU) on YouTube
-- [Scrollable Three.js Animation](https://fireship.io/snippets/threejs-scrollbar-animation) Snippet
-
-## Usage
-
-```
-git clone <this-repo>
-npm install
-npm run dev
-```# The-Great-Gatsby
+This website takes inspiration from [Fireship-IO's Tutorial](https://github.com/fireship-io/threejs-scroll-animation-demo) and [Three.js's Ocean Shader](https://github.com/mrdoob/three.js/blob/master/examples/webgl_shaders_ocean.html).

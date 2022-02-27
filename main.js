@@ -1,34 +1,42 @@
 import './style.css';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+//import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Water } from 'three/examples/jsm/objects/Water.js';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass, GodRaysEffect } from "postprocessing";
 
 // Setup
 
 const scene = new THREE.Scene();
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
+
+let lightdisplace = 0;
+const lightdist = 500;
+const omegaC = 0.6;
+let omega = omegaC;
 
 const renderer = new THREE.WebGLRenderer({
   canvas: document.querySelector('#bg'),
+  powerPreference: "high-performance",
+  antialias: false,
+  stencil: false,
+  depth: false
 });
 
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-camera.position.setZ(30);
-camera.position.setX(-3);
+
+
+let fog = new THREE.Fog(0x001e0f, 1, 1500);
+
+scene.fog = fog;
 
 renderer.render(scene, camera);
 
-// Torus
-
-const geometry = new THREE.TorusGeometry(10, 3, 16, 100);
-const material = new THREE.MeshStandardMaterial({ color: 0xff6347 });
-const torus = new THREE.Mesh(geometry, material);
-
-scene.add(torus);
 
 let sun = new THREE.Vector3();
 
@@ -44,7 +52,7 @@ const water = new Water(
 
     } ),
     sunDirection: new THREE.Vector3(),
-    sunColor: 0xAAAAAA,
+    sunColor: 0xeeeeee,
     waterColor: 0x001e0f,
     distortionScale: 3.7,
     fog: scene.fog !== undefined
@@ -56,6 +64,35 @@ water.rotation.x = - Math.PI / 2;
 scene.add( water );
 
 
+let texture_loader = new THREE.TextureLoader();
+let tower_texture = texture_loader.load("tower.mtl");
+const mloader = new GLTFLoader();
+let tower;
+mloader.load( 'tower.glb', function ( gltf ) {
+
+  gltf.scene.traverse( function( object ) {
+
+   if ( object.isMesh ) object.material.map = tower_texture;
+
+  });
+
+  gltf.scene.position.set(0,-2,lightdist);
+  tower = gltf.scene;
+  scene.add( tower );
+
+});
+
+
+const greenLightGeo = new THREE.SphereGeometry(2, 24, 24);
+const greenLightMaterial = new THREE.MeshStandardMaterial({ color: 0x015e18, emissive: 0x015e18, emissiveIntensity:3 });
+const greenLight = new THREE.Mesh(greenLightGeo, greenLightMaterial);
+greenLight.position.set(0,30,lightdist);
+
+const pointLight = new THREE.PointLight(0x015e18);
+pointLight.position.set(0,30,lightdist-10);
+scene.add(pointLight);
+
+
 const sky = new Sky();
 sky.scale.setScalar( 10000 );
 scene.add( sky );
@@ -63,8 +100,8 @@ scene.add( sky );
 const skyUniforms = sky.material.uniforms;
 
 skyUniforms[ 'turbidity' ].value = 0.1;
-skyUniforms[ 'rayleigh' ].value = 1; // 0.005
-skyUniforms[ 'mieCoefficient' ].value = 0.0000005;
+skyUniforms[ 'rayleigh' ].value = 0.005; // 0.005
+skyUniforms[ 'mieCoefficient' ].value = 0.0000005; // 0.0000005
 skyUniforms[ 'mieDirectionalG' ].value = 0.008;
 
 
@@ -79,22 +116,78 @@ water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
 scene.environment = pmremGenerator.fromScene( sky ).texture;
 
 
-const greenLight = new THREE.PointLight(0xff0000);
-greenLight.position.set( 0, 50, 50 );
-greenLight.intensity = 5;
-scene.add( greenLight );
+
 
 const ambientLight = new THREE.AmbientLight(0xffffff);
 ambientLight.intensity = 1;
 scene.add(ambientLight);
 
-// Helpers
+// // Helpers
 
-const gridHelper = new THREE.GridHelper(200, 50);
-const pointHelper = new THREE.PointLightHelper(greenLight);
-scene.add(pointHelper, gridHelper)
+// const gridHelper = new THREE.GridHelper(200, 50);
+// scene.add(gridHelper);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+let godraysEffect = new GodRaysEffect(camera, greenLight, {
+  resolutionScale: 1,
+  density: 0.8,
+  decay: 0.98,
+  weight: 0.9,
+  samples: 100
+});
+
+
+// const bloomOptions = {
+//   luminanceThreshold: 0.55,
+//   luminanceSmoothing: 0.0,
+// };
+
+// let bloomEffect = new BloomEffect(bloomOptions);
+
+// bloomEffect.setIntensity(30);
+
+let renderPass = new RenderPass(scene, camera);
+let effectPass = new EffectPass(camera,godraysEffect);
+effectPass.renderToScreen = true;
+
+
+
+let composer = new EffectComposer(renderer);
+composer.addPass(renderPass);
+composer.addPass(effectPass);
+
+
+const rainCount = 100;
+let rainDrops = [];
+
+let loader = new THREE.TextureLoader();
+loader.load("snow.png", function(texture){
+  let rainGeo = new THREE.CircleGeometry(4,4);
+  let rainMaterial = new THREE.MeshLambertMaterial({
+    map: texture,
+    transparent: true,
+    opacity: 0.8,
+    color: 0xFFFFFF
+  });
+  for(let i=0;i<rainCount;i++) {
+    let rain = new THREE.Mesh(rainGeo,rainMaterial);
+    rain.position.set(Math.random() * 200 -100,Math.random() * 200 +100,Math.random() * lightdist);
+    rain.rotation.x = Math.PI + Math.random() * Math.PI/3;
+    rain.rotation.y = Math.random() * Math.PI/3;
+    rain.rotation.z = Math.random() * Math.PI * 2;
+    rainDrops.push(rain);
+    scene.add(rain);
+  }
+});
+
+
+
+
+
+
+
+scene.add( greenLight );
+
+//const controls = new OrbitControls(camera, renderer.domElement);
 
 function addStar() {
   const geometry = new THREE.SphereGeometry(2, 24, 24);
@@ -103,13 +196,11 @@ function addStar() {
 
   let theta = THREE.MathUtils.randFloatSpread(Math.PI);
   let phi = THREE.MathUtils.randFloatSpread(Math.PI*2);
-  let r = THREE.MathUtils.randFloatSpread(1000)+1000;
+  let r = THREE.MathUtils.randFloatSpread(1000)+1500;
   let y = r*Math.cos(theta);
   let rho = r*Math.sin(theta);
   let x = rho*Math.sin(phi);
   let z = rho*Math.cos(phi);
-
-  console.log([x,y,z]);
 
   star.position.set(x, y, z);
   scene.add(star);
@@ -122,31 +213,58 @@ Array(2000).fill().forEach(addStar);
 const spaceTexture = new THREE.TextureLoader().load('space.jpg');
 scene.background = spaceTexture;
 
+
+
+
+
+
+camera.position.set(0,20,0);
+camera.lookAt( new THREE.Vector3(0,30,200) );
+
+
+
+
 // Scroll Animation
 
 function moveCamera() {
   const t = document.body.getBoundingClientRect().top;
-  camera.position.z = t * -0.01;
-  camera.position.x = t * -0.0002;
-  camera.rotation.y = t * -0.0002;
+  camera.position.z = -t * 0.1;
+  lightdisplace = -t * 0.1;
+  greenLight.position.z = lightdisplace + lightdist;
+  pointLight.position.z = lightdisplace + lightdist - 10;
+  tower.position.z = lightdisplace + lightdist;
 }
 
-// document.body.onscroll = moveCamera;
-// moveCamera();
+document.body.onscroll = moveCamera;
 
 // Animation Loop
+
+let tt = 0;
 
 function animate() {
   requestAnimationFrame(animate);
 
-  torus.rotation.x += 0.01;
-  torus.rotation.y += 0.005;
-  torus.rotation.z += 0.01;
+  tt += 1/60.0*omega;
+
+  godraysEffect.godRaysMaterial.uniforms.decay.value = Math.abs(Math.sin(tt))/2+0.48;
+
+  if(tt >= 2*Math.PI){
+    tt = 0;
+    omega = Math.random()*0.5+omegaC;
+  }
+
   water.material.uniforms[ 'time' ].value += 2.0 / 60.0;
 
-  controls.update();
+  rainDrops.forEach(p => {
+    p.position.y -= 1;
+    if(p.position.y <= 0){
+      p.position.set(Math.random() * 200 -100,Math.random() * 200 +100,lightdisplace + Math.random() * lightdist);
+    }
+  });
 
-  renderer.render(scene, camera);
+  //controls.update();
+
+  composer.render(0.1);
 }
 
 animate();

@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import { Water } from 'three/examples/jsm/objects/Water.js';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
 import { EffectComposer, EffectPass, RenderPass, GodRaysEffect } from "postprocessing";
 
 // Setup

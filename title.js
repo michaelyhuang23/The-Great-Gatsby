@@ -13,7 +13,7 @@ var textHead = new Blotter.Text("The Hidden Gatsbies", {
 
 var materialHead = new Blotter.FliesMaterial();
 
-materialHead.uniforms.uPointCellWidth.value = 0.01;
+materialHead.uniforms.uPointCellWidth.value = 0.017;
 materialHead.uniforms.uPointRadius.value = .8;
 materialHead.uniforms.uSpeed.value = 5;
 

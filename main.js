@@ -15,12 +15,16 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 
 let lightdisplace = 0;
 const lightdist = 500;
-const omegaC = 0.6;
+const omegaC = 0.9;
 let omega = omegaC;
 
-const dumpGroundLoc = 60;
-const myrtleLoc = 260;
-const carLoc = 460;
+const dumpGroundLoc = 130;
+const myrtleLoc = 330;
+const carLoc = 530;
+
+const maxVisible = 100;
+const minVisible = 50;
+
 
 
 const renderer = new THREE.WebGLRenderer({
@@ -202,8 +206,8 @@ Array(2000).fill().forEach(addStar);
 
 // Background
 
-const spaceTexture = new THREE.TextureLoader().load('images/space.jpg');
-scene.background = spaceTexture;
+// const spaceTexture = new THREE.TextureLoader().load('images/eckleburg.webp');
+// scene.background = spaceTexture;
 
 
 
@@ -218,14 +222,15 @@ function makeImage(image, location, right){
   }
   obj.position.set(x_d,22,location);
   obj.rotation.set(0,Math.PI,0);
+  obj.material.transparent = true;
   scene.add(obj);
+  return obj;
 }
 
 
-makeImage('dump-ground.png', dumpGroundLoc, true);
-makeImage('myrtle.png', myrtleLoc, false);
-makeImage('death-car.jpg', carLoc, true);
-
+let dumpGround = makeImage('dump-ground.png', dumpGroundLoc, true);
+let myrtle = makeImage('myrtle.png', myrtleLoc, false);
+let deathCar = makeImage('death-car.jpg', carLoc, true);
 
 
 camera.position.set(0,20,0);
@@ -249,10 +254,25 @@ document.body.onscroll = moveCamera;
 
 // Animation Loop
 
+function fadeIn(obj){
+  let dist = Math.abs(obj.position.z - camera.position.z);
+  if(dist > maxVisible){
+    obj.material.opacity = 0; 
+  }else if(dist < minVisible){
+    obj.material.opacity = 1;
+  }else{
+    obj.material.opacity = 1-(dist-minVisible)/(maxVisible-minVisible);
+  }
+}
+
 let tt = 0;
 
 function animate() {
   requestAnimationFrame(animate);
+
+  fadeIn(dumpGround);
+  fadeIn(myrtle);
+  fadeIn(deathCar);
 
   tt += 1/60.0*omega;
 

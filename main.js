@@ -5,7 +5,7 @@ import { Water } from 'three/examples/jsm/objects/Water.js';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-import { SelectiveBloomEffect, BloomEffect, EffectComposer, EffectPass, RenderPass, GodRaysEffect } from "postprocessing";
+import { EffectComposer, EffectPass, RenderPass, GodRaysEffect } from "postprocessing";
 
 // Setup
 
@@ -17,6 +17,11 @@ let lightdisplace = 0;
 const lightdist = 500;
 const omegaC = 0.6;
 let omega = omegaC;
+
+const dumpGroundLoc = 60;
+const myrtleLoc = 260;
+const carLoc = 460;
+
 
 const renderer = new THREE.WebGLRenderer({
   canvas: document.querySelector('#bg'),
@@ -46,7 +51,7 @@ const water = new Water(
   {
     textureWidth: 512,
     textureHeight: 512,
-    waterNormals: new THREE.TextureLoader().load( 'waternormals.jpg', function ( texture ) {
+    waterNormals: new THREE.TextureLoader().load( 'images/waternormals.jpg', function ( texture ) {
 
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
@@ -65,10 +70,10 @@ scene.add( water );
 
 
 let texture_loader = new THREE.TextureLoader();
-let tower_texture = texture_loader.load("tower.mtl");
+let tower_texture = texture_loader.load("images/tower.mtl");
 const mloader = new GLTFLoader();
 let tower;
-mloader.load( 'tower.glb', function ( gltf ) {
+mloader.load( 'images/tower.glb', function ( gltf ) {
 
   gltf.scene.traverse( function( object ) {
 
@@ -81,6 +86,7 @@ mloader.load( 'tower.glb', function ( gltf ) {
   scene.add( tower );
 
 });
+
 
 
 const greenLightGeo = new THREE.SphereGeometry(2, 24, 24);
@@ -136,15 +142,6 @@ let godraysEffect = new GodRaysEffect(camera, greenLight, {
 });
 
 
-// const bloomOptions = {
-//   luminanceThreshold: 0.55,
-//   luminanceSmoothing: 0.0,
-// };
-
-// let bloomEffect = new BloomEffect(bloomOptions);
-
-// bloomEffect.setIntensity(30);
-
 let renderPass = new RenderPass(scene, camera);
 let effectPass = new EffectPass(camera,godraysEffect);
 effectPass.renderToScreen = true;
@@ -160,7 +157,7 @@ const rainCount = 100;
 let rainDrops = [];
 
 let loader = new THREE.TextureLoader();
-loader.load("snow.png", function(texture){
+loader.load("images/snow.png", function(texture){
   let rainGeo = new THREE.CircleGeometry(4,4);
   let rainMaterial = new THREE.MeshLambertMaterial({
     map: texture,
@@ -178,11 +175,6 @@ loader.load("snow.png", function(texture){
     scene.add(rain);
   }
 });
-
-
-
-
-
 
 
 scene.add( greenLight );
@@ -210,11 +202,29 @@ Array(2000).fill().forEach(addStar);
 
 // Background
 
-const spaceTexture = new THREE.TextureLoader().load('space.jpg');
+const spaceTexture = new THREE.TextureLoader().load('images/space.jpg');
 scene.background = spaceTexture;
 
 
 
+
+function makeImage(image, location, right){
+  const texture = new THREE.TextureLoader().load('images/'+image);
+  const geo = new THREE.PlaneGeometry(50,50);
+  const obj = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({map:texture}));
+  let x_d = 30; 
+  if(right){
+    x_d *= -1;
+  }
+  obj.position.set(x_d,22,location);
+  obj.rotation.set(0,Math.PI,0);
+  scene.add(obj);
+}
+
+
+makeImage('dump-ground.png', dumpGroundLoc, true);
+makeImage('myrtle.png', myrtleLoc, false);
+makeImage('death-car.jpg', carLoc, true);
 
 
 
